@@ -1,0 +1,150 @@
+                                  TASK 4 : Setup and Use a Firewall on Windows/Linux
+
+
+1 .Open firewa l configuration tool (Windows Firewa l or terminal for UFW)
+
+# list firewall service state
+Get-Service MpsSvc    # Windows Firewall service
+Start → type Windows Defender Firewall with Advanced Security → Enter.
+
+PowerShell:
+
+
+2 .List current firewa l rules.
+
+GUI: In the firewall window go to Inbound Rules (or Outbound) — you can sort/filter.
+
+PowerShell / netsh:
+
+powershell
+Copy code
+# list inbound rules (brief)
+Get-NetFirewallRule -Direction Inbound | Format-Table DisplayName, Enabled, Action, Profile -AutoSize
+
+# or use netsh for full listing:
+netsh advfirewall firewall show rule name=all
+
+
+3 .Add a rule to block inbound traffic on a specific port 
+
+PowerShell (recommended):
+
+powershell
+Copy code
+New-NetFirewallRule -DisplayName "Block-Telnet-Inbound" -Direction Inbound -Action Block -Protocol TCP -LocalPort 23 -Enabled True
+netsh equivalent:
+
+cmd
+Copy code
+netsh advfirewall firewall add rule name="Block Telnet (23)" dir=in action=block protocol=TCP localport=23
+GUI: Firewall → Inbound Rules → New Rule… → choose Port → TCP → Specific local ports: 23 → Block the connection → pick profiles → name it → Finish.
+
+
+4 .Test the rule by attempting to connect to that port loca ly or remotely.
+
+
+From a client machine (or PowerShell on another host):
+
+powershell
+Copy code
+Test-NetConnection -ComputerName <server-ip> -Port 23
+# returns TcpTestSucceeded : False if blocked
+Alternate: telnet <server-ip> 23 (Windows may need Telnet Client enabled), or nmap -p 23 <server-ip>.
+
+Note: If testing on same host, Test-NetConnection -Port 23 -ComputerName localhost can show local behavior.
+
+
+
+5 .Add rule to alow SSH (port 22) if on Linux
+
+You already saw the Linux UFW commands above; on Windows, if you run an SSH server and want to allow port 22:
+
+powershell
+Copy code
+New-NetFirewallRule -DisplayName "Allow-OpenSSH" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 22 -Enabled True
+
+
+
+6 .Remove the test block rule to restore original state.
+
+
+PowerShell:
+
+powershell
+Copy code
+Remove-NetFirewallRule -DisplayName "Block-Telnet-Inbound"
+netsh:
+
+cmd
+Copy code
+netsh advfirewall firewall delete rule name="Block Telnet (23)" protocol=TCP localport=23
+GUI: Find the rule in Inbound Rules → right-click → Delete.
+
+
+7 .Document commands or GUI steps used.
+
+
+# List inbound firewall rules
+Get-NetFirewallRule -Direction Inbound | Format-Table DisplayName,Enabled,Action,Profile -AutoSize
+
+# Add inbound block for TCP port 23
+New-NetFirewallRule -DisplayName "Block-Telnet-Inbound" -Direction Inbound -Action Block -Protocol TCP -LocalPort 23 -Enabled True
+
+# Test connection (replace <server-ip> with actual host IP)
+Test-NetConnection -ComputerName <server-ip> -Port 23
+
+# Remove the Telnet block rule
+Remove-NetFirewallRule -DisplayName "Block-Telnet-Inbound"
+
+
+Windows GUI path
+Start → Search Windows Defender Firewall with Advanced Security → Open it.
+
+Click Inbound Rules → New Rule…
+
+Choose Port → Select TCP → Enter 23 in Specific local ports.
+
+Select Block the connection.
+
+Choose applicable profiles (Domain, Private, Public).
+
+Give it a Name (e.g., "Block Telnet") → Finish.
+
+
+
+8.Summarize how firewal filters traffic.    give me step by step solutions of this pointsw
+
+
+Packet & Port Filtering: Matches packets by source/destination IP, source/destination port, and protocol (TCP, UDP, ICMP). Based on rules, packets are allowed or blocked.
+
+Direction & Profiles/Zones: Rules apply to inbound (into the host) or outbound (leaving the host) traffic.
+
+Windows: Domain / Private / Public profiles.
+
+Linux/UFW: Application/port rules + default policy.
+
+Stateful Inspection: Tracks connection states (NEW, ESTABLISHED, RELATED) so return traffic for an allowed session is permitted without a matching outbound rule.
+
+Rule Order & Specificity: More specific rules override general ones; processing stops at the first match.
+
+Default Policy:
+
+UFW: deny incoming, allow outgoing (by default).
+
+Windows: depends on profile and system policy.
+
+Application-Aware Filtering: Can allow/deny based on application identity (e.g., Windows Filtering Platform).
+
+Logging: Firewalls can log dropped packets — helpful to confirm if a packet was blocked or a service was simply not listening.
+
+Under the Hood:
+
+UFW is a user-friendly front-end for iptables/nftables.
+
+Windows Firewall is built on the Windows Filtering Platform (WFP).
+
+
+
+
+
+
